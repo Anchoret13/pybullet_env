@@ -75,8 +75,8 @@ class ThrowBall:
 
         return x, y, z, roll, pitch, yaw, gripper_opening_length
 
-    def step(self, action, control_method='throw'):
-        assert control_method in ('throw', 'move')
+    def step(self, action, control_method='joint'):
+        assert control_method in ('joint', 'end')
         self.robot.move_ee(action[:-1], control_method)
         self.robot.move_gripper(action[-1])
         for _ in range(120):  # Wait for a few steps
