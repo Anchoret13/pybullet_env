@@ -5,7 +5,7 @@ import gym
 import numpy as np
 import math
 from test_env import ThrowBall
-from robot import Panda, UR5Robotiq85
+from robot import UR5Robotiq85
 from utilities import YCBModels, Camera
 import os
 
@@ -23,7 +23,7 @@ camera = Camera((4, 0, 1),
                     0.1, 5, (320, 320), 40)
 
 # camera = None
-robot = Panda((0, 0.5, 0), (0, 0, math.pi))
+# robot = Panda((0, 0.5, 0), (0, 0, math.pi))
 robot = UR5Robotiq85((0, 0.5, 0), (0, 0, 0))
 env = ThrowBall(robot, ycb_models, camera, vis=True)
 env.reset()

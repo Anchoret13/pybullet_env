@@ -5,7 +5,7 @@ import os
 import numpy as np
 import pybullet as p
 import pybullet_data
-from robot import Panda,UR5Robotiq85
+from robot import UR5Robotiq85
 from utilities import YCBModels, Camera
 
 from utilities import Models, Camera
@@ -54,6 +54,9 @@ class ThrowBall:
                                     start_position, start_orientation)
         self.ball = p.loadURDF("./urdf/ball_test.urdf", ball_position)
 
+        # For calculating the reward
+        self.box_contact = False
+
     def step_simulation(self):
         p.stepSimulation()
         if self.vis:
@@ -72,29 +75,32 @@ class ThrowBall:
 
         return x, y, z, roll, pitch, yaw, gripper_opening_length
 
-    def step(self, action, control_method='joint'):
-        assert control_method in ('joint', 'end')
+    def step(self, action, control_method='throw'):
+        assert control_method in ('throw', 'move')
         self.robot.move_ee(action[:-1], control_method)
         self.robot.move_gripper(action[-1])
         for _ in range(120):  # Wait for a few steps
             self.step_simulation()
     
-    
+    def update_reward(self):
+        reward = 0
+        pass
 
+    def get_observation(self):
+        obs = dict
+        if isinstance(self.camera, Camera):
+            rgb, depth, seg = self.camera.shot()
+            obs.update(dict(rgb = rgb, depth = depth, seg = seg))
+        else:
+            assert self.camera is None
+        
+        obs.update(self.robot.get_joint_obs())
 
+    def reset_env():
+        # reset object position
+        pass
 
-ycb_models = YCBModels(os.path.join('./data/ycb/', '**', 'textured-decmp.obj'))
-
-camera = Camera((4, 0, 1),
-                    (0, -0.7, 0),
-                    (0, 0, 1),
-                    0.1, 5, (320, 320), 40)
-
-# camera = None
-# robot = Panda((0, 0.5, 0), (0, 0, math.pi))
-robot = UR5Robotiq85((0, 0.5, 0), (0, 0, 0))
-env = ThrowBall(robot, ycb_models, camera, vis=True)
-# env.reset()
-
-while True:
-    pre = env.step(env.read_debug_parameter(), 'end')
+    def reset(self):
+        self.robot.reset()
+        # self.reset_env()
+        return self.get_observation()
