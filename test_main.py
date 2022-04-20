@@ -28,5 +28,10 @@ robot = UR5Robotiq85((0, 0.5, 0), (0, 0, 0))
 env = ThrowBall(robot, ycb_models, camera, vis=True)
 env.reset()
 
+current_state = 0
+state_t = 0
+control_dt = 1./240
+
 while True:
+    state_t += control_dt
     obs, reward, done, info = env.step(env.read_debug_parameter(), 'end')
