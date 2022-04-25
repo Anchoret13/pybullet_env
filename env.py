@@ -52,14 +52,15 @@ class Throwing:
         self.btn_pressed = False
         self.box_closed = False
 
-        start_position = [-3.0, 0.0, 0.0]
-        start_orientation = p.getQuaternionFromEuler([0, 0, 0])
+        self.cube_position = [-3.0, 0.0, 0.0]
+        self.cube_orientation = p.getQuaternionFromEuler([0, 0, 0])
 
-        ball_position = [-0.0, 0.0, 0.3]
+        self.ball_position = [-0.0, 0.0, 0.3]
+        self.ball_orientation = p.getQuaternionFromEuler([0, 0, 0])
         self.cube = p.loadURDF("/home/dyf/Desktop/robo/XWorld/games/xworld3d/models_3d/block/cube_0.7/cube.urdf", 
-                                    start_position, start_orientation,
+                                    self.cube_position, self.cube_orientation,
                                     useFixedBase=True)
-        self.ball = p.loadURDF("./urdf/ball_test.urdf", ball_position)
+        self.ball = p.loadURDF("./urdf/ball_test.urdf", self.ball_position, self.ball_orientation)
 
         # For calculating the reward
         self.box_contact = False
@@ -85,7 +86,7 @@ class Throwing:
 
         return x, y, z, roll, pitch, yaw, gripper_opening_length
 
-    def step(self, action, control_method='joint'):
+    def step(self, action, control_method='end'):
         """
         action: (x, y, z, roll, pitch, yaw, gripper_opening_length) for End Effector Position Control
                 (a1, a2, a3, a4, a5, a6, a7, gripper_opening_length) for Joint Position Control
@@ -121,7 +122,12 @@ class Throwing:
 
 
     def reset_env(self):
-        pass
+        # pass
+        
+        p.resetBasePositionAndOrientation(self.ball, self.ball_position, self.ball_orientation)
+        p.resetBasePositionAndOrientation(self.cube, self.cube_position, self.cube_orientation)
+        # self.robot.move_ee()
+        self.robot.move_ee([0, 0, 0.1, 1.570796251296997, 1.570796251296997, 1.570796251296997],'end')
 
     def reset(self):
         self.robot.reset()
@@ -144,5 +150,10 @@ env.reset()
 count = 0
 while count < 10000:
     obs, reward, done, info = env.step(env.read_debug_parameter(), 'end')
-    print(obs, reward, done, info, count)
+    print(env.read_debug_parameter())
     count = count + 1
+
+    print(count)
+
+# 思路： 先改了debug parameter,手动设定初始position orientation。
+# action :(x, y, z, row, pitch, yall, open_length)

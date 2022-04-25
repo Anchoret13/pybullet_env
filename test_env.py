@@ -94,7 +94,6 @@ class ThrowBall:
     
     def update_reward(self):
         reward = 0
-        print(self.ball)
         pass
 
     def get_observation(self):
@@ -109,7 +108,8 @@ class ThrowBall:
 
     def reset_env(self):
         # reset object position and grasp the ball
-        p.resetSimulation()
+        init_action = (0, 0, 0.2, 0, 0, 0)
+        self.robot.move_ee(init_action,'end')
         
 
     def reset(self):

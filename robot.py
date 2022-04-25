@@ -177,7 +177,3 @@ class UR5Robotiq85(RobotBase):
         # Control the mimic gripper joint(s)
         p.setJointMotorControl2(self.id, self.mimic_parent_id, p.POSITION_CONTROL, targetPosition=open_angle,
                                 force=self.joints[self.mimic_parent_id].maxForce, maxVelocity=self.joints[self.mimic_parent_id].maxVelocity)
-
-class HuskyUR(UR5Robotiq85):
-    def __init_robot__(self):
-        return super().__init_robot__()
