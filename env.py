@@ -37,25 +37,29 @@ class Throwing:
         self.robot.load()
         self.robot.step_simulation = self.step_simulation
 
-        # custom sliders to tune parameters (name of the parameter,range,initial value)
-        self.xin = p.addUserDebugParameter("x", -0.224, 0.224, 0)
-        self.yin = p.addUserDebugParameter("y", -0.224, 0.224, 0)
-        self.zin = p.addUserDebugParameter("z", 0, 1., 0.5)
-        self.rollId = p.addUserDebugParameter("roll", -3.14, 3.14, 0)
-        self.pitchId = p.addUserDebugParameter("pitch", -3.14, 3.14, np.pi/2)
-        self.yawId = p.addUserDebugParameter("yaw", -np.pi/2, np.pi/2, np.pi/2)
-        self.gripper_opening_length_control = p.addUserDebugParameter("gripper_opening_length", 0, 0.085, 0.04)
+        # adjusting using sliders to tune parameters (name of the parameter,range,initial value)
+        # self.xin = p.addUserDebugParameter("x", -0.224, 0.224, 0)
+        # self.yin = p.addUserDebugParameter("y", -0.224, 0.224, 0)
+        # self.zin = p.addUserDebugParameter("z", 0, 1., 0.5)
+        # self.rollId = p.addUserDebugParameter("roll", -3.14, 3.14, 0)
+        # self.pitchId = p.addUserDebugParameter("pitch", -3.14, 3.14, np.pi/2)
+        # self.yawId = p.addUserDebugParameter("yaw", -np.pi/2, np.pi/2, np.pi/2)
+        # self.gripper_opening_length_control = p.addUserDebugParameter("gripper_opening_length", 0, 0.085, 0.04)
+
+        # initialize ee position
+        self.xin = 0
+        self.yin = 0
+        self.zin = 0.4
+        self.rollId = 0
+        self.pitchId = np.pi/2
+        self.yawId = np.pi/2
+        self.gripper_opening_length_control = 0.04
 
 
-        # For calculating the reward
-        self.box_opened = False
-        self.btn_pressed = False
-        self.box_closed = False
-
-        self.cube_position = [-3.0, 0.0, 0.0]
+        self.cube_position = [-1.5, 0.0, 0.0]
         self.cube_orientation = p.getQuaternionFromEuler([0, 0, 0])
 
-        self.ball_position = [-0.0, 0.0, 0.3]
+        self.ball_position = [-0.0, 0.0, 0.0]
         self.ball_orientation = p.getQuaternionFromEuler([0, 0, 0])
         self.cube = p.loadURDF("/home/dyf/Desktop/robo/XWorld/games/xworld3d/models_3d/block/cube_0.7/cube.urdf", 
                                     self.cube_position, self.cube_orientation,
@@ -63,7 +67,7 @@ class Throwing:
         self.ball = p.loadURDF("./urdf/ball_test.urdf", self.ball_position, self.ball_orientation)
 
         # For calculating the reward
-        self.box_contact = False
+        self.box_collide = False
 
     def step_simulation(self):
         """
@@ -75,7 +79,7 @@ class Throwing:
             self.p_bar.update(1)
 
     def read_debug_parameter(self):
-        # read the value of task parameter
+        # FOR ENV DEBUGGING JUST IGNORE THIS
         x = p.readUserDebugParameter(self.xin)
         y = p.readUserDebugParameter(self.yin)
         z = p.readUserDebugParameter(self.zin)
@@ -90,18 +94,21 @@ class Throwing:
         """
         action: (x, y, z, roll, pitch, yaw, gripper_opening_length) for End Effector Position Control
                 (a1, a2, a3, a4, a5, a6, a7, gripper_opening_length) for Joint Position Control
-        control_method:  'end' for end effector position control
-                         'joint' for joint position control
+        control_method:  'end' for inverse kinematics
+                         'joint' for forward kinematics
         """
         assert control_method in ('joint', 'end')
         self.robot.move_ee(action[:-1], control_method)
+
+        for _ in range(40):  # Wait for a few steps
+            self.step_simulation()
         self.robot.move_gripper(action[-1])
         for _ in range(120):  # Wait for a few steps
             self.step_simulation()
 
         reward = self.update_reward()
         done = True if reward == 1 else False
-        info = dict(box_opened=self.box_opened, btn_pressed=self.btn_pressed, box_closed=self.box_closed)
+        info = dict(box_collide = self.box_collide)
         return self.get_observation(), reward, done, info
 
     def update_reward(self):
@@ -126,8 +133,22 @@ class Throwing:
         
         p.resetBasePositionAndOrientation(self.ball, self.ball_position, self.ball_orientation)
         p.resetBasePositionAndOrientation(self.cube, self.cube_position, self.cube_orientation)
-        # self.robot.move_ee()
-        self.robot.move_ee([0, 0, 0.1, 1.570796251296997, 1.570796251296997, 1.570796251296997],'end')
+
+        self.robot.move_ee((0, 0, 0.18, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
+        self.robot.move_gripper(0.02)
+        for _ in range(120):  # Wait for a few steps
+            self.step_simulation()
+
+        self.robot.move_gripper(0.015)
+        
+        for _ in range(240):  # Wait for a few steps
+            self.step_simulation()
+
+        self.robot.move_ee((0, 0, 0.4, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
+        for _ in range(120):  # Wait for a few steps
+            self.step_simulation()
+
+        
 
     def reset(self):
         self.robot.reset()
@@ -146,14 +167,16 @@ camera = Camera((4, 0, 1),
                     0.1, 5, (320, 320), 40)
 robot = UR5Robotiq85((0, 0.5, 0), (0, 0, 0))
 env = Throwing(robot, ycb_models, camera, vis=True)
-env.reset()
 count = 0
-while count < 10000:
-    obs, reward, done, info = env.step(env.read_debug_parameter(), 'end')
-    print(env.read_debug_parameter())
-    count = count + 1
 
+env.reset()
+
+while count < 10000:
+    # env.step(env.read_debug_parameter(),'end')
+    env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
+# obs, reward, done, info = env.step((0, 0, 0.6, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
+    count = count + 1
     print(count)
 
-# 思路： 先改了debug parameter,手动设定初始position orientation。
+# Adjusting Initial State
 # action :(x, y, z, row, pitch, yall, open_length)
