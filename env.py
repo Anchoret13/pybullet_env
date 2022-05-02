@@ -56,14 +56,15 @@ class Throwing:
         self.gripper_opening_length_control = 0.04
 
 
-        self.cube_position = [-1.5, 0.0, 0.0]
+        self.cube_position = [-0.9, 0, 0.0]
         self.cube_orientation = p.getQuaternionFromEuler([0, 0, 0])
 
         self.ball_position = [-0.0, 0.0, 0.0]
         self.ball_orientation = p.getQuaternionFromEuler([0, 0, 0])
-        self.cube = p.loadURDF("/home/dyf/Desktop/robo/XWorld/games/xworld3d/models_3d/block/cube_0.7/cube.urdf", 
+        self.cube = p.loadURDF("./urdf/block/cube_0.3/cube.urdf", 
                                     self.cube_position, self.cube_orientation,
-                                    useFixedBase=True)
+                                    useFixedBase=True,
+                                    flags = p.URDF_USE_SELF_COLLISION)
         self.ball = p.loadURDF("./urdf/ball_test.urdf", self.ball_position, self.ball_orientation)
 
         # For calculating the reward
@@ -77,6 +78,11 @@ class Throwing:
         if self.vis:
             time.sleep(self.SIMULATION_STEP_DELAY)
             self.p_bar.update(1)
+
+    def uptown_funk(self, time = 120):
+        # STOP! WAIT A MINUTE
+        for _ in range(time):  
+            self.step_simulation()
 
     def read_debug_parameter(self):
         # FOR ENV DEBUGGING JUST IGNORE THIS
@@ -100,23 +106,32 @@ class Throwing:
         assert control_method in ('joint', 'end')
         self.robot.move_ee(action[:-1], control_method)
 
-        for _ in range(40):  # Wait for a few steps
-            self.step_simulation()
+        self.uptown_funk(80)
         self.robot.move_gripper(action[-1])
-        for _ in range(120):  # Wait for a few steps
-            self.step_simulation()
-
         reward = self.update_reward()
+        self.uptown_funk(400)
+
         done = True if reward == 1 else False
         info = dict(box_collide = self.box_collide)
         return self.get_observation(), reward, done, info
 
     def update_reward(self):
         reward = 0
-        pass
+        if self.box_collide == True:
+            print("SUCCESS!")
+            reward = 1
         return reward
 
+    def get_state(self):
+        state = dict()
+        #READ CURRENT PARAMETER#
+        collide = self.box_collide
+        robot_pos = self.robot.get_joint_obs()
+        state.update(dict(collide = collide, robot_pos = robot_pos))
+        pass
+
     def get_observation(self):
+        # USING THE CAMERA TO OBTAIN THE OBSERVATION
         obs = dict()
         if isinstance(self.camera, Camera):
             rgb, depth, seg = self.camera.shot()
@@ -127,28 +142,21 @@ class Throwing:
 
         return obs
 
-
     def reset_env(self):
-        # pass
         
         p.resetBasePositionAndOrientation(self.ball, self.ball_position, self.ball_orientation)
         p.resetBasePositionAndOrientation(self.cube, self.cube_position, self.cube_orientation)
-
+        # after initialize the position of the ball and cube, grasp the ball as initial state
+        self.robot.move_ee((0, 0, 0.4, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
+        self.uptown_funk(120)
         self.robot.move_ee((0, 0, 0.18, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
         self.robot.move_gripper(0.02)
-        for _ in range(120):  # Wait for a few steps
-            self.step_simulation()
-
+        self.uptown_funk(120)
         self.robot.move_gripper(0.015)
-        
-        for _ in range(240):  # Wait for a few steps
-            self.step_simulation()
+        self.uptown_funk(240)
 
         self.robot.move_ee((0, 0, 0.4, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
-        for _ in range(120):  # Wait for a few steps
-            self.step_simulation()
-
-        
+        self.uptown_funk(120)
 
     def reset(self):
         self.robot.reset()
@@ -158,10 +166,12 @@ class Throwing:
     def close(self):
         p.disconnect(self.physicsClient)
 
+## TEST CASE
+
 import os
 from robot import UR5Robotiq85
 ycb_models = YCBModels(os.path.join('./data/ycb', '**', 'textured-decmp.obj'),)
-camera = Camera((4, 0, 1),
+camera = Camera((0, -3, 0.5),
                     (0, -0.7, 0),
                     (0, 0, 1),
                     0.1, 5, (320, 320), 40)
@@ -173,10 +183,12 @@ env.reset()
 
 while count < 10000:
     # env.step(env.read_debug_parameter(),'end')
-    env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
-# obs, reward, done, info = env.step((0, 0, 0.6, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
+
+    obs, reward, done, info = env.step((-0.8, -0.2, 1.3, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
+    # obs, reward, done, info = env.step((0, 0, 0.6, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
     count = count + 1
     print(count)
+    env.reset()
 
 # Adjusting Initial State
 # action :(x, y, z, row, pitch, yall, open_length)
