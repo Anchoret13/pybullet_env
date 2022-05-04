@@ -145,7 +145,7 @@ class UR5Robotiq85(RobotBase):
         self.arm_rest_poses = [-1.5690622952052096, -1.5446774605904932, 1.343946009733127, -1.3708613585093699,
                                -1.5707970583733368, 0.0009377758247187636]
         self.id = p.loadURDF('./urdf/ur5_robotiq_85.urdf', self.base_pos, self.base_ori,
-                             useFixedBase=True, flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
+                             useFixedBase=False, flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
         self.gripper_range = [0, 0.085]
     
     def __post_load__(self):
@@ -178,20 +178,32 @@ class UR5Robotiq85(RobotBase):
         p.setJointMotorControl2(self.id, self.mimic_parent_id, p.POSITION_CONTROL, targetPosition=open_angle,
                                 force=self.joints[self.mimic_parent_id].maxForce, maxVelocity=self.joints[self.mimic_parent_id].maxVelocity)
 
-
-class UR5Husky(UR5Robotiq85):
+class HuskyUR5(UR5Robotiq85):
     def __init_robot__(self):
         self.eef_id = 7
         self.arm_num_dofs = 6
         self.arm_rest_poses = [-1.5690622952052096, -1.5446774605904932, 1.343946009733127, -1.3708613585093699,
                                -1.5707970583733368, 0.0009377758247187636]
+        self.base_pos = (0, 0.5, 0.38)
+        self.base_ori = p.getQuaternionFromEuler((0, 0, 0))
         self.id = p.loadURDF('./urdf/ur5_robotiq_85.urdf', self.base_pos, self.base_ori,
-                             useFixedBase=True, flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
+                             useFixedBase=False, flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
         self.gripper_range = [0, 0.085]
 
-        self.husky_poses = [0, 0, 0]
-        self.husky_orn = [-1, 0, 0]
+        self.husky_pose = (0, 0.5, 0.0)
+        self.husky_orn =  p.getQuaternionFromEuler((0, 0, 0))
 
-    def move_car(self, velocity, direction):
-        initial_wheelVel = [0, 0, 0, 0]
-        self.wheels = [2, 3, 4, 5]
+        self.husky = p.loadURDF("urdf/husky.urdf", self.husky_pose, self.husky_orn)
+        c = p.createConstraint(self.husky, -1,
+                               self.id, -1, 
+                               jointType = p.JOINT_FIXED, 
+                               jointAxis = [0, 0, 0], 
+                               parentFramePosition = [0, 0, 0], 
+                               childFramePosition = [0., 0., -0.5],
+                               childFrameOrientation = [0, 0, 0, 1])
+
+    def move_ugv(self, velocity):
+        ## THE UGV MOVE THROUGH THE LINE
+        maxForce = 1000
+        for joint in range(2, 6):
+            p.setJointMotorControl(self.husky, joint, p.VELOCITY_CONTROL, velocity, maxForce)
