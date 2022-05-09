@@ -182,18 +182,18 @@ class HuskyUR5(UR5Robotiq85):
     def __init_robot__(self):
         self.eef_id = 7
         self.arm_num_dofs = 6
-        self.arm_rest_poses = [-1.5690622952052096, -1.5446774605904932, 1.343946009733127, -1.3708613585093699,
+        self.arm_rest_poses = [-1.5690622952052096,-1.5446774605904932, 1.343946009733127, -1.3708613585093699,
                                -1.5707970583733368, 0.0009377758247187636]
-        self.base_pos = (0, 0.5, 0.38)
-        self.base_ori = p.getQuaternionFromEuler((0, 0, 0))
+        # self.base_pos = pos
+        # self.base_ori = p.getQuaternionFromEuler(ori)
         self.id = p.loadURDF('./urdf/ur5_robotiq_85.urdf', self.base_pos, self.base_ori,
                              useFixedBase=False, flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
         self.gripper_range = [0, 0.085]
 
-        self.husky_pose = (0, 0.5, 0.0)
+        self.husky_pose = (0.5, 0.5, 0.0)
         self.husky_orn =  p.getQuaternionFromEuler((0, 0, 0))
 
-        self.husky = p.loadURDF("urdf/husky.urdf", self.husky_pose, self.husky_orn)
+        self.husky = p.loadURDF("urdf/husky.urdf", self.husky_pose, self.husky_orn, useFixedBase=False)
         c = p.createConstraint(self.husky, -1,
                                self.id, -1, 
                                jointType = p.JOINT_FIXED, 
