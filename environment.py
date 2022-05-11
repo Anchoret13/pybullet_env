@@ -83,11 +83,12 @@ class Throwing:
                                     flags = p.URDF_USE_SELF_COLLISION)
         '''
         self.ball = p.loadURDF("./urdf/ball_test.urdf", self.ball_position, self.ball_orientation)
-
-        '''
-        state space: (gripper_pos, gripper_ori, target_obj_pos)
-        '''
         # For calculating the reward
+        self.state_space = {
+            'state' :,
+            'achieve_goal' :,
+            'desired_goal' :
+        }
         '''
         self.state_space = {
             'state': (gripper_pos, gripper_ori, target_obj_pos),
@@ -139,7 +140,7 @@ class Throwing:
         self.uptown_funk(400)
 
         done = True if reward == 1 else False
-        info = dict(box_collide = self.box_collide)
+        # info = dict(box_collide = self.box_collide)
         return self.get_observation(), reward, done, info
 
     def step(self, action, control_method='end'):
@@ -162,6 +163,12 @@ class Throwing:
         return self.get_state(), reward, done, info
 
     def update_reward(self):
+
+        """
+        realtime height check
+        to be implemented
+        """
+        
         reward = -1
         if self.box_collide == True:
             print("SUCCESS!")
@@ -193,6 +200,13 @@ class Throwing:
         return np.lianalg.norm(goal_a - goal_b, axis = 1)
     
     def compute_reward(self):
+        """
+        d = goal_distance(achieved_goal, goal)
+        if self.reward_type == 'sparse':
+            return -(d > self.distance_threshold).astype(np.float32)
+        else:
+            return -d
+        """
         pass
 
     def reset_env(self):
