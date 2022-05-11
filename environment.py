@@ -65,29 +65,36 @@ class Throwing:
 
         self.ball_position = [-0.0, -0.18, 0.6]
         self.ball_orientation = p.getQuaternionFromEuler([0, 0, 0])
+        '''
         self.collision_cube = p.loadURDF("./urdf/block/cube_0.3/cube2.urdf", 
                                     self.collision_cube_position, self.cube_orientation,
                                     useFixedBase=False,
                                     flags = p.URDF_USE_SELF_COLLISION)
+        ''' 
+        ## REMOVE THE MOBILE CUBE
         self.cube = p.loadURDF("./urdf/block/cube_0.3/cube.urdf", 
                                     self.cube_position, self.cube_orientation,
                                     useFixedBase=False,
                                     flags = p.URDF_USE_SELF_COLLISION)
-        self.ball_base = p.loadURDF("./urdf/block/cube_0.3/cube2.urdf", 
+        '''
+        self.ball_base = p.loadURDF("./urdf/objects/cube_0.3/cube.urdf", 
                                     self.ball_base_position, self.cube_orientation,
                                     useFixedBase=False,
                                     flags = p.URDF_USE_SELF_COLLISION)
+        '''
         self.ball = p.loadURDF("./urdf/ball_test.urdf", self.ball_position, self.ball_orientation)
 
+        '''
+        state space: (gripper_pos, gripper_ori, target_obj_pos)
+        '''
         # For calculating the reward
         '''
         self.state_space = {
-            'state': ,
-            'achieve_goal': ,
-            'desired_goal':
+            'state': (gripper_pos, gripper_ori, target_obj_pos),
+            'achieve_goal': (gripper_pos, gripper_ori, target_obj_pos),
+            'desired_goal': (gripper_pos, gripper_ori, target_obj_pos)
         }
         '''
-        self.action_space = []
         self.box_collide = False
 
     def step_simulation(self):
@@ -152,7 +159,7 @@ class Throwing:
 
         done = True if reward == 1 else False
         info = dict(box_collide = self.box_collide)
-        return self.get_observation(), reward, done, info
+        return self.get_state(), reward, done, info
 
     def update_reward(self):
         reward = -1
@@ -180,6 +187,13 @@ class Throwing:
         obs.update(self.robot.get_joint_obs())
 
         return obs
+
+    def goal_distance(goal_a, goal_b):
+        assert goal_a.shape == goal_b.shape
+        return np.lianalg.norm(goal_a - goal_b, axis = 1)
+    
+    def compute_reward(self):
+        pass
 
     def reset_env(self):
         
@@ -223,7 +237,7 @@ env.reset()
 while count < 10000:
     # env.step(env.read_debug_parameter(),'end')
     # env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
-    env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 30, -10),'end')
+    env.step((-0, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 30, 0),'end')
     count = count + 1
     print(count)
     env.reset()
