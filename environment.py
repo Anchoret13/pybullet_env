@@ -32,7 +32,7 @@ class Throwing:
         p.setAdditionalSearchPath(pybullet_data.getDataPath())
         p.setGravity(0, 0, -10)
         p.setTimeStep(self.SIMULATION_STEP_DELAY)
-        self.planeID = p.loadURDF("plane.urdf")
+        self.planeID = p.loadURDF("./urdf/plane.urdf")
 
         self.robot.load()
         self.robot.step_simulation = self.step_simulation
@@ -63,7 +63,7 @@ class Throwing:
 
         self.ball_base_position = [0, -0.3, 0.3]
 
-        self.ball_position = [-0.0, -0.15, 0.4]
+        self.ball_position = [-0.0, -0.15, 0.35]
         self.ball_orientation = p.getQuaternionFromEuler([0, 0, 0])
         '''
         self.collision_cube = p.loadURDF("./urdf/block/cube_0.3/cube2.urdf", 
@@ -93,7 +93,7 @@ class Throwing:
         self.state = self.get_state()
 
         self.distance_threshold = 1
-        self.reward_type = 'dense'
+        self.reward_type = 'sparse'
 
     def step_simulation(self):
         """
@@ -138,6 +138,7 @@ class Throwing:
         release_time = action[-2]
         self.uptown_funk(release_time)
         self.robot.move_gripper(action[-3])
+        self.uptown_funk(200)
 
         state = self.get_state()
         achieved_goal = state['achieved_goal']
@@ -170,9 +171,9 @@ class Throwing:
         return position
 
     def sample_goal(self):
-        sample_x = -3 * np.random.random()
-        sample_y = 1 - 2 * np.random.random()
-        sample_z = 0.7 * np.random.random()
+        sample_x = -2.4 * np.random.random()
+        sample_y = 0.8 - 1.6 * np.random.random()
+        sample_z = 0
         goal = (sample_x, sample_y, sample_z)
         return goal
 
@@ -258,12 +259,9 @@ env.reset()
 while count < 10000:
     # env.step(env.read_debug_parameter(),'end')
     # env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
-    state, reward, done, info = env.step((-0.5, -0, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 40, -2))
+    state, reward, done, info = env.step((-0.5, -0, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 30, -2))
     count = count + 1
     print('=============================')
     print(state)
     print('-----------------------------')
     env.reset()
-
-# Adjusting Initial State
-# action :(x, y, z, row, pitch, yall, open_length)

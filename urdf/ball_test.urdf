@@ -1,6 +1,10 @@
 
 <robot name="simple_ball">
   <link name="ball">
+  <contact>
+      <lateral_friction value="1.0"/>
+      <rolling_friction value = "0.008"/>
+  </contact>
     <inertial>
       <mass value="1.0" />
       <!-- center of mass (com) is defined w.r.t. link local coordinate system -->
