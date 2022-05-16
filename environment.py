@@ -86,11 +86,14 @@ class Throwing:
         '''
         self.state_space = {
             'state' :,
-            'achieve_goal' :,
+            'achieved_goal' :,
             'desired_goal' :
         }
         '''
         self.state = self.get_state()
+
+        self.distance_threshold = 1
+        self.reward_type = 'dense'
 
     def step_simulation(self):
         """
@@ -117,6 +120,11 @@ class Throwing:
         gripper_opening_length = p.readUserDebugParameter(self.gripper_opening_length_control)
 
         return x, y, z, roll, pitch, yaw, gripper_opening_length
+    
+    def is_success(self, achieved_goal, desired_goal):
+        d = self.goal_distance(achieved_goal, desired_goal)
+        print(d)
+        return (d<self.distance_threshold)
 
     def step(self, action, control_method='end'):
         """
@@ -130,13 +138,17 @@ class Throwing:
         release_time = action[-2]
         self.uptown_funk(release_time)
         self.robot.move_gripper(action[-3])
-        # reward = self.compute_reward(achieve_goal, goal)
-        reward = self.update_reward()
+
+        state = self.get_state()
+        achieved_goal = state['achieved_goal']
+        desired_goal = state['desired_goal']
+        reward = self.compute_reward(achieved_goal, desired_goal)
+        # reward = self.compute_reward()
         self.uptown_funk(400)
 
         done = True if reward == 1 else False
-        info = dict(box_collide = self.box_collide)
-        return self.get_state(), reward, done, info
+        info = dict()
+        return state, reward, done, info
 
     def update_reward(self):
 
@@ -151,14 +163,18 @@ class Throwing:
         return reward
 
     def get_ball_obs(self):
-        position, ori = p.getBasePosition(self.ball)
+        position, ori = p.getBasePositionAndOrientation(self.ball)
         # velocity = []
         velocity, angular_velocity = p.getBaseVelocity(self.ball)
         # return dict(position = position, velocity = velocity)
-        return dict(ball_pos = position)
+        return position
 
     def sample_goal(self):
-        pass
+        sample_x = -3 * np.random.random()
+        sample_y = 1 - 2 * np.random.random()
+        sample_z = 0.7 * np.random.random()
+        goal = (sample_x, sample_y, sample_z)
+        return goal
 
     def get_state(self):
         state = dict()
@@ -167,11 +183,11 @@ class Throwing:
         state.update(robot_pos = robot_pos)
         # ACHIEVED GOAL
         achieved_goal = self.get_ball_obs()
-        state.update(achieved_goal)
+        state.update(achieved_goal = achieved_goal)
 
         # DESIRED GOAL
         desired_goal = self.sample_goal()
-        state.update(desired_goal)
+        state.update(desired_goal = desired_goal)
 
         return state
 
@@ -188,8 +204,10 @@ class Throwing:
         return obs
 
     def goal_distance(self, goal_a, goal_b):
+        goal_a = np.array(goal_a)
+        goal_b = np.array(goal_b)
         assert goal_a.shape == goal_b.shape
-        return np.lianalg.norm(goal_a - goal_b, axis = 1)
+        return np.linalg.norm(goal_a - goal_b)
     
     def compute_reward(self, achieved_goal, goal):
         d = self.goal_distance(achieved_goal, goal)
@@ -224,7 +242,6 @@ class Throwing:
     def close(self):
         p.disconnect(self.physicsClient)
 
-
 import os
 from robot import UR5Robotiq85, HuskyUR5
 ycb_models = YCBModels(os.path.join('./data/ycb', '**', 'textured-decmp.obj'),)
@@ -232,7 +249,6 @@ camera = Camera((4, 0, 1),
                     (0, -0.7, 0),
                     (0, 0, 1),
                     0.1, 5, (320, 320), 40)
-# robot = UR5Robotiq85((0, 0.5, 0), (0, 0, 0))
 robot = HuskyUR5((-0.2, 0.5, 0.5), (0, 0, 0))
 env = Throwing(robot, ycb_models, camera, vis=True)
 count = 0
@@ -242,9 +258,11 @@ env.reset()
 while count < 10000:
     # env.step(env.read_debug_parameter(),'end')
     # env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
-    env.step((-0.5, -0, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 40, -2))
+    state, reward, done, info = env.step((-0.5, -0, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 40, -2))
     count = count + 1
-    print(count)
+    print('=============================')
+    print(state)
+    print('-----------------------------')
     env.reset()
 
 # Adjusting Initial State
