@@ -61,9 +61,9 @@ class Throwing:
 
         self.collision_cube_position = [-1.8, 0, 0.3]
 
-        self.ball_base_position = [0, -0.3, 0]
+        self.ball_base_position = [0, -0.3, 0.3]
 
-        self.ball_position = [-0.0, -0.18, 0.6]
+        self.ball_position = [-0.0, -0.15, 0.4]
         self.ball_orientation = p.getQuaternionFromEuler([0, 0, 0])
         '''
         self.collision_cube = p.loadURDF("./urdf/block/cube_0.3/cube2.urdf", 
@@ -71,32 +71,26 @@ class Throwing:
                                     useFixedBase=False,
                                     flags = p.URDF_USE_SELF_COLLISION)
         ''' 
-        ## REMOVE THE MOBILE CUBE
-        self.cube = p.loadURDF("./urdf/block/cube_0.3/cube.urdf", 
-                                    self.cube_position, self.cube_orientation,
-                                    useFixedBase=False,
-                                    flags = p.URDF_USE_SELF_COLLISION)
-        '''
-        self.ball_base = p.loadURDF("./urdf/objects/cube_0.3/cube.urdf", 
+        # self.cube = p.loadURDF("./urdf/block/cube_0.3/cube.urdf", 
+        #                             self.cube_position, self.cube_orientation,
+        #                             useFixedBase=False,
+        #                             flags = p.URDF_USE_SELF_COLLISION)
+        
+        self.ball_base = p.loadURDF("./urdf/objects/table.urdf", 
                                     self.ball_base_position, self.cube_orientation,
-                                    useFixedBase=False,
+                                    useFixedBase=True,
                                     flags = p.URDF_USE_SELF_COLLISION)
-        '''
+        
         self.ball = p.loadURDF("./urdf/ball_test.urdf", self.ball_position, self.ball_orientation)
         # For calculating the reward
+        '''
         self.state_space = {
             'state' :,
             'achieve_goal' :,
             'desired_goal' :
         }
         '''
-        self.state_space = {
-            'state': (gripper_pos, gripper_ori, target_obj_pos),
-            'achieve_goal': (gripper_pos, gripper_ori, target_obj_pos),
-            'desired_goal': (gripper_pos, gripper_ori, target_obj_pos)
-        }
-        '''
-        self.box_collide = False
+        self.state = self.get_state()
 
     def step_simulation(self):
         """
@@ -124,25 +118,6 @@ class Throwing:
 
         return x, y, z, roll, pitch, yaw, gripper_opening_length
 
-    def old_step(self, action, control_method='end'):
-        """
-        action: (x, y, z, roll, pitch, yaw, gripper_opening_length) for End Effector Position Control
-                (a1, a2, a3, a4, a5, a6, a7, gripper_opening_length) for Joint Position Control
-        control_method:  'end' for inverse kinematics
-                         'joint' for forward kinematics
-        """
-        assert control_method in ('joint', 'end')
-        self.robot.move_ee(action[:-1], control_method)
-
-        self.uptown_funk(30)
-        self.robot.move_gripper(action[-1])
-        reward = self.update_reward()
-        self.uptown_funk(400)
-
-        done = True if reward == 1 else False
-        # info = dict(box_collide = self.box_collide)
-        return self.get_observation(), reward, done, info
-
     def step(self, action, control_method='end'):
         """
         throw: (x, y, z, roll, pitch, yaw, gripper_opening_length, release_time, car_velocity)
@@ -155,6 +130,7 @@ class Throwing:
         release_time = action[-2]
         self.uptown_funk(release_time)
         self.robot.move_gripper(action[-3])
+        # reward = self.compute_reward(achieve_goal, goal)
         reward = self.update_reward()
         self.uptown_funk(400)
 
@@ -168,20 +144,36 @@ class Throwing:
         realtime height check
         to be implemented
         """
-        
         reward = -1
         if self.box_collide == True:
             print("SUCCESS!")
             reward = 0
         return reward
 
+    def get_ball_obs(self):
+        position, ori = p.getBasePosition(self.ball)
+        # velocity = []
+        velocity, angular_velocity = p.getBaseVelocity(self.ball)
+        # return dict(position = position, velocity = velocity)
+        return dict(ball_pos = position)
+
+    def sample_goal(self):
+        pass
+
     def get_state(self):
         state = dict()
-        #READ CURRENT PARAMETER#
-        collide = self.box_collide
+        # ROBOT STATE
         robot_pos = self.robot.get_joint_obs()
-        state.update(dict(collide = collide, robot_pos = robot_pos))
-        pass
+        state.update(robot_pos = robot_pos)
+        # ACHIEVED GOAL
+        achieved_goal = self.get_ball_obs()
+        state.update(achieved_goal)
+
+        # DESIRED GOAL
+        desired_goal = self.sample_goal()
+        state.update(desired_goal)
+
+        return state
 
     def get_observation(self):
         # USING THE CAMERA TO OBTAIN THE OBSERVATION
@@ -195,40 +187,39 @@ class Throwing:
 
         return obs
 
-    def goal_distance(goal_a, goal_b):
+    def goal_distance(self, goal_a, goal_b):
         assert goal_a.shape == goal_b.shape
         return np.lianalg.norm(goal_a - goal_b, axis = 1)
     
-    def compute_reward(self):
-        """
-        d = goal_distance(achieved_goal, goal)
+    def compute_reward(self, achieved_goal, goal):
+        d = self.goal_distance(achieved_goal, goal)
         if self.reward_type == 'sparse':
             return -(d > self.distance_threshold).astype(np.float32)
         else:
             return -d
-        """
-        pass
-
+        
     def reset_env(self):
         
         p.resetBasePositionAndOrientation(self.ball, self.ball_position, self.ball_orientation)
-        p.resetBasePositionAndOrientation(self.cube, self.cube_position, self.cube_orientation)
+        # p.resetBasePositionAndOrientation(self.cube, self.cube_position, self.cube_orientation)
         # after initialize the position of the ball and cube, grasp the ball as initial state
-        self.robot.move_ee((0, -0.15, 0.4, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
+        
+        self.robot.move_ee((0, -0.15, 0.75, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
         self.uptown_funk(120)
-        self.robot.move_ee((0, -0.15, 0.18, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
-        self.robot.move_gripper(0.02)
+        self.robot.open_gripper()
+        self.robot.move_ee((0, -0.15, 0.50, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')        
         self.uptown_funk(120)
-        self.robot.move_gripper(0.015)
+        self.robot.close_gripper()
         self.uptown_funk(120)
 
-        self.robot.move_ee((0, -0.15, 0.4, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
+        self.robot.move_ee((0, -0.15, 0.7, 1.570796251296997, 1.570796251296997, 1.570796251296997),'end')
         self.uptown_funk(120)
 
     def reset(self):
         self.robot.reset()
         self.reset_env()
-        return self.get_state()
+        state = self.get_state()
+        return state
 
     def close(self):
         p.disconnect(self.physicsClient)
@@ -242,7 +233,7 @@ camera = Camera((4, 0, 1),
                     (0, 0, 1),
                     0.1, 5, (320, 320), 40)
 # robot = UR5Robotiq85((0, 0.5, 0), (0, 0, 0))
-robot = HuskyUR5((0.5, 0.5, 0.5), (0, 0, 0))
+robot = HuskyUR5((-0.2, 0.5, 0.5), (0, 0, 0))
 env = Throwing(robot, ycb_models, camera, vis=True)
 count = 0
 
@@ -251,7 +242,7 @@ env.reset()
 while count < 10000:
     # env.step(env.read_debug_parameter(),'end')
     # env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
-    env.step((-0, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 30, 0),'end')
+    env.step((-0.5, -0, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 40, -2))
     count = count + 1
     print(count)
     env.reset()

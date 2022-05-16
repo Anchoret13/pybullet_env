@@ -137,7 +137,6 @@ class RobotBase(object):
         ee_pos = p.getLinkState(self.id, self.eef_id)[0]
         return dict(positions=positions, velocities=velocities, ee_pos=ee_pos)
 
-
 class UR5Robotiq85(RobotBase):
     def __init_robot__(self):
         self.eef_id = 7
@@ -180,7 +179,7 @@ class UR5Robotiq85(RobotBase):
 
 class HuskyUR5(UR5Robotiq85):
     def __init_robot__(self):
-        self.eef_id = 7
+        self.eef_id = 6
         self.arm_num_dofs = 6
         self.arm_rest_poses = [-1.5690622952052096,-1.5446774605904932, 1.343946009733127, -1.3708613585093699,
                                -1.5707970583733368, 0.0009377758247187636]
@@ -190,7 +189,7 @@ class HuskyUR5(UR5Robotiq85):
                              useFixedBase=False, flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
         self.gripper_range = [0, 0.085]
 
-        self.husky_pose = (0.5, 0.5, 0.0)
+        self.husky_pose = (self.base_pos[0], self.base_pos[1], 0.0)
         self.husky_orn =  p.getQuaternionFromEuler((0, 0, 0))
 
         self.husky = p.loadURDF("urdf/husky.urdf", self.husky_pose, self.husky_orn, useFixedBase=False)
@@ -204,6 +203,40 @@ class HuskyUR5(UR5Robotiq85):
 
     def move_ugv(self, velocity):
         ## THE UGV MOVE THROUGH THE LINE
-        maxForce = 1000
+        maxForce = 10000
         for joint in range(2, 6):
             p.setJointMotorControl(self.husky, joint, p.VELOCITY_CONTROL, velocity, maxForce)
+
+    def reset_car(self):
+        p.removeBody(self.husky)
+        self.husky = p.loadURDF("urdf/husky.urdf", self.husky_pose, self.husky_orn, useFixedBase=False)
+        c = p.createConstraint(self.husky, -1,
+                               self.id, -1, 
+                               jointType = p.JOINT_FIXED, 
+                               jointAxis = [0, 0, 0], 
+                               parentFramePosition = [0, 0, 0], 
+                               childFramePosition = [0., 0., -0.5],
+                               childFrameOrientation = [0, 0, 0, 1])
+
+    def reset_arm(self):
+        """
+        reset to rest poses
+        """
+        p.removeBody(self.id)
+        self.id = p.loadURDF('./urdf/ur5_robotiq_85.urdf', self.base_pos, self.base_ori,
+                             useFixedBase=False, flags=p.URDF_ENABLE_CACHED_GRAPHICS_SHAPES)
+        for rest_pose, joint_id in zip(self.arm_rest_poses, self.arm_controllable_joints):
+            p.resetJointState(self.id, joint_id, rest_pose)
+
+        # Wait for a few steps
+        for _ in range(10):
+            self.step_simulation()
+
+    def reset_gripper(self):
+        self.open_gripper()
+
+    def reset(self):
+        print(self.joints)
+        self.reset_arm()
+        self.reset_gripper()
+        self.reset_car()

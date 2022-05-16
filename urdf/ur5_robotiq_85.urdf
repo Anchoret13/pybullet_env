@@ -539,7 +539,7 @@
   ########          connect model                #####
   ####################################################-->
 
-  <!--link name="world"/-->
+  <!-- <link name="world"/> -->
   <!-- connect gripper to arm -->
   <joint name="robotiq_85_base_joint" type="fixed">
     <parent link="ee_link"/>
@@ -554,11 +554,11 @@
 <!--  </joint>-->
 
   <!-- connect arm to world -->
-  <!--<joint name="world_arm_joint" type="fixed">
+  <!-- <joint name="world_arm_joint" type="fixed">
     <parent link="world"/>
     <child link="base_link"/>
     <origin rpy="0.0 0.0 0" xyz="0 0 0"/>
-  </joint>-->
+  </joint> -->
 
 
 </robot>
