@@ -243,25 +243,26 @@ class Throwing:
     def close(self):
         p.disconnect(self.physicsClient)
 
-import os
-from robot import UR5Robotiq85, HuskyUR5
-ycb_models = YCBModels(os.path.join('./data/ycb', '**', 'textured-decmp.obj'),)
-camera = Camera((4, 0, 1),
-                    (0, -0.7, 0),
-                    (0, 0, 1),
-                    0.1, 5, (320, 320), 40)
-robot = HuskyUR5((-0.2, 0.5, 0.5), (0, 0, 0))
-env = Throwing(robot, ycb_models, camera, vis=True)
-count = 0
 
-env.reset()
+# import os
+# from robot import UR5Robotiq85, HuskyUR5
+# ycb_models = YCBModels(os.path.join('./data/ycb', '**', 'textured-decmp.obj'),)
+# camera = Camera((4, 0, 1),
+#                     (0, -0.7, 0),
+#                     (0, 0, 1),
+#                     0.1, 5, (320, 320), 40)
+# robot = HuskyUR5((-0.2, 0.5, 0.5), (0, 0, 0))
+# env = Throwing(robot, ycb_models, camera, vis=True)
+# count = 0
 
-while count < 10000:
-    # env.step(env.read_debug_parameter(),'end')
-    # env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
-    state, reward, done, info = env.step((-0.5, -0, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 30, -2))
-    count = count + 1
-    print('=============================')
-    print(state)
-    print('-----------------------------')
-    env.reset()
+# env.reset()
+
+# while count < 10000:
+#     # env.step(env.read_debug_parameter(),'end')
+#     # env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
+#     state, reward, done, info = env.step((-0.5, -0, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 30, -2))
+#     count = count + 1
+#     print('=============================')
+#     print(state)
+#     print('-----------------------------')
+#     env.reset()
