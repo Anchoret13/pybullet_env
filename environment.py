@@ -10,7 +10,7 @@ from utilities import Models, Camera, YCBModels
 from collections import namedtuple
 from attrdict import AttrDict
 from tqdm import tqdm
-
+from math import pi
 
 class FailToReachTargetError(RuntimeError):
     pass
@@ -90,7 +90,7 @@ class Throwing:
             'desired_goal' :
         }
         '''
-        self.state = self.get_state()
+        self.goal = self.sample_goal()
 
         self.distance_threshold = 1
         self.reward_type = 'sparse'
@@ -126,29 +126,50 @@ class Throwing:
         print(d)
         return (d<self.distance_threshold)
 
+    # def step(self, ):
+
+
     def step(self, action, control_method='end'):
         """
         throw: (x, y, z, roll, pitch, yaw, gripper_opening_length, release_time, car_velocity)
         move: (x, y, z, roll, pitch, yaw, gripper_opening_length, release_time, car_velocity)
         """
         assert control_method in ('end', 'joint')
-        self.robot.move_ugv(action[-1])
-        self.robot.move_ee(action[:-3], control_method)
+        ### goal visualization
+        goal_ori = p.getQuaternionFromEuler([0, 0, 0])
+        goal_vis = p.loadURDF('./urdf/block/brick_0.3/brick.urdf', self.goal, goal_ori)
 
-        release_time = action[-2]
-        self.uptown_funk(release_time)
-        self.robot.move_gripper(action[-3])
-        self.uptown_funk(200)
+        gas = action[-1]*2
+        self.robot.move_ugv(gas)
+        base_pos, _ = p.getBasePositionAndOrientation(self.robot.id)
+        # base_pos x ,y ,z
+        # import pdb
+        # pdb.set_trace()
+        absolute_pos = action[:6] 
+        absolute_pos[:3] += np.array(base_pos)
+        absolute_pos[3:6] = (absolute_pos[3:6] + 1/2)*pi
 
+        self.robot.move_ee(absolute_pos, control_method)
+        delta_t = 50
+        release_time = int((action[-2] + 1)/2* delta_t)
+        if release_time > delta_t:
+            self.uptown_funk(delta_t)
+
+        elif release_time <= delta_t:
+            self.uptown_funk(release_time)
+            self.robot.move_gripper(action[-3])
+            self.uptown_funk(delta_t-release_time)
+        # self.uptown_funk(release_time)
+        
+        # self.uptown_funk(100)
         state = self.get_state()
         achieved_goal = state['achieved_goal']
         desired_goal = state['desired_goal']
         reward = self.compute_reward(achieved_goal, desired_goal)
-        # reward = self.compute_reward()
-        self.uptown_funk(400)
 
-        done = True if reward == 1 else False
-        info = dict()
+        done = True if reward == 0 else False
+        # reward = self.compute_reward()
+        info = []
         return state, reward, done, info
 
     def update_reward(self):
@@ -171,7 +192,7 @@ class Throwing:
         return position
 
     def sample_goal(self):
-        sample_x = -2.4 * np.random.random()
+        sample_x = -1 -2 * np.random.random()
         sample_y = 0.8 - 1.6 * np.random.random()
         sample_z = 0
         goal = (sample_x, sample_y, sample_z)
@@ -187,7 +208,7 @@ class Throwing:
         state.update(achieved_goal = achieved_goal)
 
         # DESIRED GOAL
-        desired_goal = self.sample_goal()
+        desired_goal = self.goal
         state.update(desired_goal = desired_goal)
 
         return state
@@ -260,9 +281,6 @@ class Throwing:
 # while count < 10000:
 #     # env.step(env.read_debug_parameter(),'end')
 #     # env.step((-0.6, -0.1, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1),'end')
-#     state, reward, done, info = env.step((-0.5, -0, 0.9, 1.570796251296997, 1.570796251296997, 1.570796251296997, 0.1, 30, -2))
+#     state, reward, done, info = env.step(np.array((-0, -0, 0.9, 0, 0, 0, 0.1, 0.5, -.5)))
+#     state, reward, done, info = env.step(np.array((-0, -0, 0.8, 0, 0, 0, 0.1,-0.5, -0.5)))
 #     count = count + 1
-#     print('=============================')
-#     print(state)
-#     print('-----------------------------')
-#     env.reset()
